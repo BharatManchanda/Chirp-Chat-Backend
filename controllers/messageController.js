@@ -26,7 +26,7 @@ class MessageController {
      */
     static async getMessages(req, res) {
         try {
-            const page = parseInt(req.params.page) || 1; // default to page 1
+            const page = parseInt(req.query.page) || 1; // default to page 1
             const limit = parseInt(req.params.limit) || 50;
             const skip = (page - 1) * limit;
 
@@ -47,15 +47,15 @@ class MessageController {
             });
 
             res.json({
-            status: true,
-            data: messages.reverse(),
-            pagination: {
-                total: totalMessages,
-                page,
-                limit,
-                totalPages: Math.ceil(totalMessages / limit)
-            }
-        });
+                status: true,
+                data: messages.reverse(),
+                pagination: {
+                    total: totalMessages,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(totalMessages / limit)
+                }
+            });
         } catch (err) {
             res.status(422).json({
                 status: false,
