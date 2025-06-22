@@ -8,19 +8,27 @@ class PeopleController {
             const limit = parseInt(req.query.limit, 10) || 10;
             const skip = (page - 1) * limit;
 
-            // Get IDs of friends
             const friendIds = req.user.friends;
-
-            // Exclude self and friends
             const excludeIds = [...friendIds, userId];
 
-            // Query users who are not friends and not self
-            const users = await User.find({ _id: { $nin: excludeIds } })
+            let users = await User.find({ _id: { $nin: excludeIds } })
                 .skip(skip)
                 .limit(limit)
                 .select('-password -__v'); // Exclude sensitive fields
 
-            // Get total count for pagination
+            users = users.map((user) => {
+                let status = "none"
+                if (user.friendRequests.includes(req.user._id)) {
+                    status = "sent";
+                } else if (user.sentRequests.includes(req.user._id)) {
+                    status = "received";
+                }
+                return {
+                    ...user.toObject(),
+                    friendRequestStatus: status
+                }
+            })
+
             const total = await User.countDocuments({ _id: { $nin: excludeIds } });
 
             res.json({

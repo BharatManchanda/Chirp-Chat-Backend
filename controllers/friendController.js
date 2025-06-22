@@ -5,7 +5,17 @@ const FriendService = require("../services/friend.service");
 class FriendController {
     static async sendRequest(req, res) {
         try {
-            await FriendService.sendRequest(req.body.senderId, req.body.receiverId);
+            await User.findByIdAndUpdate(req.user._id, {
+                $addToSet: {
+                    sentRequests: req.body.receiverId
+                }
+            });
+
+            await User.findByIdAndUpdate(req.body.receiverId, {
+                $addToSet: {
+                    friendRequests: req.user._id
+                }
+            });
             res.json({
                 status: true,
                 message: 'Request sent.'
@@ -50,7 +60,8 @@ class FriendController {
 
     static async getRequests(req, res) {
         try {
-            const user = await User.findById(req.params.userId).populate('friendRequests', 'name email');
+            const user = await User.findById(req.params.userId)
+                .populate('friendRequests', 'name email');
             if (!user) return res.status(404).json({ error: 'User not found.' });
             res.json({
                 status: true,
@@ -67,7 +78,9 @@ class FriendController {
     static async getFriends(req, res) {
         try {
             const userId = req.user._id
-            const user = await User.findById(req.user._id).select('friends').populate('friends', 'username email');
+            const user = await User.findById(req.user._id)
+                .select('friends')
+                .populate('friends', 'username email');
 
             const friends = await Promise.all(
                 user.friends.map(async(friend) => {

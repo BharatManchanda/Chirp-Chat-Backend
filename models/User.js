@@ -34,7 +34,7 @@ const UserSchema = mongoose.Schema({
             ref: 'User'
         }
     ],
-    sentRequests:   [
+    sentRequests: [
         {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User'
