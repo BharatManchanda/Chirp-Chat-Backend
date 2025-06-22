@@ -26,7 +26,7 @@ const MessageSchema = mongoose.Schema({
         ref: 'Message',
         default: null,
     },
-    readtAt: {
+    readAt: {
         type: Date,
         default: null,
     },

@@ -13,6 +13,7 @@ const webPush = require("web-push");
 const { Server, Socket } = require("socket.io");
 const MessageController = require("./controllers/messageController");
 const User = require("./models/User");
+const Message = require("./models/Message");
 
 const server = http.createServer(app);
 
@@ -70,6 +71,7 @@ io.on("connection", (socket) => {
 			io.to(data.receiverId).emit("chat-message", savedMessage);
 			io.to(data.senderId).emit("chat-message", savedMessage);
 			const user = await User.findById(data.receiverId);
+
 			if (user.subscription) {
 				const payload = JSON.stringify({
 					title: "New Message",
@@ -83,6 +85,27 @@ io.on("connection", (socket) => {
 			console.log("Error: ", err.message)
 		}
 	});
+
+	// On the server
+	socket.on('mark-as-read', async ({ senderId, receiverId }) => {
+		try {
+			await Message.updateMany({
+				senderId,
+				receiverId,
+			}, {
+				$set: {
+					readAt: new Date(),
+					status: "read"
+				}
+			});
+
+			// Optional: notify sender
+			io.to(senderId).emit('mark-as-read', { receiverId });
+		} catch(err) {
+			console.log("Error: ", err.message)
+		}
+	});
+
 });
 
 server.listen(process.env.PORT, () => {
