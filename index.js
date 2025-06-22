@@ -4,6 +4,7 @@ const app = express();
 const authRouter = require("./routes/auth");
 const friendRouter = require("./routes/friend");
 const messageRouter = require("./routes/message");
+const peopleRouter = require("./routes/people");
 
 const connectDB = require("./config/db");
 const cors = require('cors');
@@ -45,6 +46,7 @@ app.get("/", function (req, res) {
 app.use("/api", authRouter)
 app.use("/api", friendRouter)
 app.use("/api", messageRouter)
+app.use("/api", peopleRouter)
 
 const onlineUsers = new Map();
 
