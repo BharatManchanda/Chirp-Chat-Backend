@@ -104,10 +104,11 @@ class AuthSessionController {
 
     static async updateMe(req, res) {
         try {
-            const { username, email } = req.body;
+            const { username, email, status } = req.body;
             const user = await User.findByIdAndUpdate(req.user._id,{
                 username,
                 email,
+                status,
             }, {
                 new: true,
                 runValidators: true,

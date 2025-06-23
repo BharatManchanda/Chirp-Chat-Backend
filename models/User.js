@@ -47,6 +47,10 @@ const UserSchema = mongoose.Schema({
     subscription: {
         type: Schema.Types.Mixed,
         default: null,
+    },
+    status: {
+        type: String,
+        default: "",
     }
 }, {
     timestamps:true,
