@@ -30,7 +30,24 @@ class FriendController {
 
     static async acceptRequest(req, res) {
         try {
-            await FriendService.acceptRequest(req.body.receiverId, req.body.senderId);
+            await User.findByIdAndUpdate(req.user._id, {
+                $addToSet: {
+                    friends: req.body.receiverId
+                },
+                $pull: {
+                    friendRequests: req.body.receiverId // Remove from friendRequests
+                }
+            });
+
+            await User.findByIdAndUpdate(req.body.receiverId, {
+                $addToSet: {
+                    friends: req.user._id
+                },
+                $pull: {
+                    sentRequests: req.user._id // Remove from sentRequests
+                }
+            });
+
             res.json({
                 status: true,
                 message: 'Friend request accepted.'
@@ -43,20 +60,34 @@ class FriendController {
         }
     }
 
-    static async rejectRequest(req, res) {
+    static async cancelRequest(req, res) {
         try {
-            await FriendService.rejectRequest(req.body.receiverId, req.body.senderId);
+            // Remove the sent request from the sender
+            await User.findByIdAndUpdate(req.user._id, {
+                $pull: {
+                    sentRequests: req.body.receiverId
+                }
+            });
+
+            // Remove the friend request from the receiver
+            await User.findByIdAndUpdate(req.body.receiverId, {
+                $pull: {
+                    friendRequests: req.user._id
+                }
+            });
+
             res.json({
                 status: true,
-                message: 'Friend request rejected.'
+                message: 'Friend request cancelled.'
             });
         } catch (err) {
-            res.status(422).json({
+            res.status(400).json({
                 status: false,
                 message: err.message
             });
         }
     }
+
 
     static async getRequests(req, res) {
         try {
