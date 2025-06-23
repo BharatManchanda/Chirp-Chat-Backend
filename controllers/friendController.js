@@ -48,9 +48,12 @@ class FriendController {
                 }
             });
 
+            let data = await User.findById(req.body.receiverId);
+
             res.json({
                 status: true,
-                message: 'Friend request accepted.'
+                message: 'Friend request accepted.',
+                data: data,
             });
         } catch (err) {
             res.status(422).json({
@@ -76,9 +79,12 @@ class FriendController {
                 }
             });
 
+            let data = await User.findById(req.body.receiverId);
+
             res.json({
                 status: true,
-                message: 'Friend request cancelled.'
+                message: 'Friend request cancelled.',
+                data: data,
             });
         } catch (err) {
             res.status(400).json({
