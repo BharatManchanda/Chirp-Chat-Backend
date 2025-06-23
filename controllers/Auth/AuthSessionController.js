@@ -104,28 +104,13 @@ class AuthSessionController {
 
     static async updateMe(req, res) {
         try {
-            const {first_name, last_name, gender, dob, religion, community, live, live_with_your_family, marital_status, diet, height, highest_qualification, college_name,  work_with,  income, about_yourself, hobbies} = req.body;
+            const { username, email } = req.body;
             const user = await User.findByIdAndUpdate(req.user._id,{
-                first_name,
-                last_name,
-                gender,
-                dob,
-                religion,
-                community,
-                live,
-                live_with_your_family,
-                marital_status,
-                diet,
-                height,
-                highest_qualification,
-                college_name,
-                work_with,
-                income,
-                about_yourself,
-                hobbies
+                username,
+                email,
             }, {
-                new: true,            // return the updated document
-                runValidators: true,  // validate before update
+                new: true,
+                runValidators: true,
             });
 
             if (!user) {
