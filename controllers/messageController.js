@@ -92,26 +92,54 @@ class MessageController {
      */
     static async deleteMessage(req, res) {
         try {
-            const { messageId, userId } = req.body;
+            const userId = req.user._id;
+            const { messageIds, deleteFor } = req.body;
 
-            const message = await Message.findById(messageId);
-            if (!message) {
-                return res.status(404).json({ status: false, message: "Message not found" });
+            // Normalize to array
+            const ids = Array.isArray(messageIds) ? messageIds : [messageIds];
+
+            const updatedMessages = [];
+
+            for (const messageId of ids) {
+                const message = await Message.findById(messageId);
+                if (!message) continue;
+
+                if (deleteFor === "everyone" && message.senderId.toString() === userId.toString()) {
+                    message.deletedForSender = true;
+                    message.deletedForReceiver = true;
+                } else if (deleteFor === "me") {
+                    if (message.senderId.toString() === userId.toString()) {
+                        message.deletedForSender = true;
+                    } else if (message.receiverId.toString() === userId.toString()) {
+                        message.deletedForReceiver = true;
+                    }
+                }
+
+                await message.save();
+                updatedMessages.push(message);
             }
 
-            if (String(message.senderId) === userId) {
-                message.deletedForSender = true;
-            }
-            if (String(message.receiverId) === userId) {
-                message.deletedForReceiver = true;
+            if (updatedMessages.length === 0) {
+                return res.status(404).json({
+                    status: false,
+                    message: "No messages found or updated"
+                });
             }
 
-            await message.save();
-            res.json({ status: true, message: "Message deleted for user", data: message });
+            res.json({
+                status: true,
+                message: `Deleted ${updatedMessages.length} message(s) for ${deleteFor}`,
+                data: updatedMessages
+            });
+
         } catch (err) {
-            res.status(500).json({ status: false, message: err.message });
+            res.status(422).json({
+                status: false,
+                message: err.message
+            });
         }
     }
+
 }
 
 module.exports = MessageController;

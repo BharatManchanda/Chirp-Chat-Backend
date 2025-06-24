@@ -51,7 +51,15 @@ const UserSchema = mongoose.Schema({
     status: {
         type: String,
         default: "",
-    }
+    },
+    blockedUsers: [{
+        type: Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    isActive: {
+        type: Boolean,
+        default: true,
+    },
 }, {
     timestamps:true,
 })
