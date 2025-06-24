@@ -35,7 +35,7 @@ class MessageController {
                     { senderId: req.user._id, receiverId: req.params.friendId },
                     { senderId: req.params.friendId, receiverId: req.user._id }
                 ]
-            }).sort({ createdAt: -1 })
+            }).populate('replyToMessageId').sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
 
