@@ -108,6 +108,27 @@ io.on("connection", (socket) => {
 		}
 	});
 
+	socket.on('call-user', (data) => {
+		io.to(data.to).emit('incoming-call', {
+			from: socket.id,
+			offer: data.offer,
+		});
+	});
+
+	socket.on('answer-call', (data) => {
+		io.to(data.to).emit('call-answered', {
+			from: socket.id,
+			answer: data.answer,
+		});
+	});
+
+	socket.on('ice-candidate', (data) => {
+		io.to(data.to).emit('ice-candidate', {
+			from: socket.id,
+			candidate: data.candidate,
+		});
+	});
+
 });
 
 server.listen(process.env.PORT, () => {
