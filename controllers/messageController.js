@@ -6,13 +6,15 @@ class MessageController {
      */
     static async sendMessage(data) {
         try {
-            const { senderId, receiverId, message } = data;
+            const { senderId, receiverId, message, replyToMessageId } = data;
             const newMessage = await Message.create({
                 senderId,
                 receiverId,
                 message,
+                replyToMessageId,
             });
-            const savedMessage = await newMessage.save();
+            const savedMessage = await Message.findById(newMessage._id)
+                .populate('replyToMessageId');
             return savedMessage;
         } catch (err) {
             console.log(err.message,":message");
