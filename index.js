@@ -116,6 +116,7 @@ io.on("connection", (socket) => {
 	});
 
 	socket.on('answer-call', (data) => {
+		console.log(data,"data::");
 		io.to(data.to).emit('call-answered', {
 			from: socket.id,
 			answer: data.answer,
@@ -128,6 +129,14 @@ io.on("connection", (socket) => {
 			candidate: data.candidate,
 		});
 	});
+
+	socket.on("get-socket-id", (Id) => {
+		const socketId = onlineUsers.get(Id);
+		if (socketId) {
+			socket.emit("socket-id-response", { socketId });
+		}
+	});
+
 
 });
 
