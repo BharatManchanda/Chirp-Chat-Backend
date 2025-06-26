@@ -62,9 +62,9 @@ io.on("connection", (socket) => {
 	});
 
 	socket.on("join", (userId) => {
-		onlineUsers.set(userId, socket.id); // Track user
-		socket.join(userId); // Join their room
-		io.emit("user-online", Array.from(onlineUsers.keys())); // Send updated online users list to all
+		onlineUsers.set(userId, socket.id);
+		socket.join(userId);
+		io.emit("user-online", Array.from(onlineUsers.keys()));
 	});
 
 	socket.on("chat-message", async (data) => {
@@ -88,7 +88,6 @@ io.on("connection", (socket) => {
 		}
 	});
 
-	// On the server
 	socket.on('mark-as-read', async ({ senderId, receiverId }) => {
 		try {
 			await Message.updateMany({
@@ -107,6 +106,8 @@ io.on("connection", (socket) => {
 			console.log("Error: ", err.message)
 		}
 	});
+
+	// Calling Socket
 
 	socket.on('call-user', (data) => {
 		io.to(data.to).emit('incoming-call', {
