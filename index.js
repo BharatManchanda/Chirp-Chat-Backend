@@ -115,8 +115,15 @@ io.on("connection", (socket) => {
 		});
 	});
 
+	socket.on('end-call', (data) => {
+		console.log(data, socket?.id,"socket?.id","::data");
+		
+		io.to(data.to).emit('end-call', {
+			from: socket?.id,
+		});
+	});
+
 	socket.on('answer-call', (data) => {
-		console.log(data,"data::");
 		io.to(data.to).emit('call-answered', {
 			from: socket.id,
 			answer: data.answer,
