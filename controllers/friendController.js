@@ -116,8 +116,10 @@ class FriendController {
         try {
             const userId = req.user._id
             const user = await User.findById(req.user._id)
-                .select('friends')
+                .select('friends blockedUsers')
                 .populate('friends', 'username email');
+
+            const  blockedIds = user.blockedUsers;
 
             const friends = await Promise.all(
                 user.friends.map(async(friend) => {
@@ -140,7 +142,8 @@ class FriendController {
                         email: friend.email,
                         profileImg: friend.profileImg,
                         lastMessage,
-                        unreadCount
+                        unreadCount,
+                        isBlocked: blockedIds.includes(friend._id.toString())
                     };
                 })
             )

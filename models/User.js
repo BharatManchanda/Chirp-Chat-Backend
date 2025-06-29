@@ -40,6 +40,10 @@ const UserSchema = mongoose.Schema({
             ref: 'User'
         }
     ],
+    blockedUsers: [{
+        type: Schema.Types.ObjectId,
+        ref: 'User'
+    }],
     isOnline: {
         type: Boolean,
         default: 0,
@@ -52,10 +56,6 @@ const UserSchema = mongoose.Schema({
         type: String,
         default: "",
     },
-    blockedUsers: [{
-        type: Schema.Types.ObjectId,
-        ref: 'User'
-    }],
     isActive: {
         type: Boolean,
         default: true,

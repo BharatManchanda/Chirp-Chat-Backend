@@ -5,6 +5,7 @@ const authRouter = require("./routes/auth");
 const friendRouter = require("./routes/friend");
 const messageRouter = require("./routes/message");
 const peopleRouter = require("./routes/people");
+const userRouter = require("./routes/user");
 
 const connectDB = require("./config/db");
 const cors = require('cors');
@@ -47,6 +48,7 @@ app.use("/api", authRouter)
 app.use("/api", friendRouter)
 app.use("/api", messageRouter)
 app.use("/api", peopleRouter)
+app.use("/api", userRouter)
 
 const onlineUsers = new Map();
 

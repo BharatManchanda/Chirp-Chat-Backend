@@ -34,8 +34,8 @@ class MessageController {
 
             const messages = await Message.find({
                 $or: [
-                    { senderId: req.user._id, receiverId: req.params.friendId },
-                    { senderId: req.params.friendId, receiverId: req.user._id }
+                    { senderId: req.user._id, receiverId: req.params.friendId, deletedForSender: { $ne: true } },
+                    { senderId: req.params.friendId, receiverId: req.user._id, deletedForReceiver: { $ne: true } }
                 ]
             }).populate('replyToMessageId').sort({ createdAt: -1 })
             .skip(skip)
@@ -135,6 +135,39 @@ class MessageController {
             });
 
         } catch (err) {
+            res.status(422).json({
+                status: false,
+                message: err.message
+            });
+        }
+    }
+
+    static async clearMessage(req, res) {
+        try {
+            const friendId = req.params.friendId;
+            const userId = req.user._id;
+
+            await Message.updateMany(
+                {
+                    senderId: userId,
+                    receiverId: friendId
+                },
+                { $set: { deletedForSender: true } }
+            );
+
+            await Message.updateMany(
+                {
+                    senderId: friendId,
+                    receiverId: userId
+                },
+                { $set: { deletedForReceiver: true } }
+            );
+
+            res.json({
+                status: true,
+                message: "Clear message successfully."
+            });
+        } catch (error) {
             res.status(422).json({
                 status: false,
                 message: err.message

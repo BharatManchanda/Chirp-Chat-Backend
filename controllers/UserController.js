@@ -10,10 +10,12 @@ class UserController {
                 $addToSet: { blockedUsers: targetUserId }
             }, { new: true });
 
+            const blockedUser = await User.findById(targetUserId);
+
             res.json({
                 status: true,
                 message: "User blocked successfully.",
-                data: user,
+                data: blockedUser,
             });
         } catch (err) {
             res.status(422).json({
@@ -34,10 +36,12 @@ class UserController {
                 }
             }, { new: true });
 
+            const unblockedUser = await User.findById(targetUserId);
+
             res.json({
                 status: true,
                 message: "User blocked successfully.",
-                data: user,
+                data: unblockedUser,
             });
         } catch (err) {
             res.status(422).json({
@@ -48,4 +52,4 @@ class UserController {
     }
 }
 
-module.exports = PeopleController;
+module.exports = UserController;
