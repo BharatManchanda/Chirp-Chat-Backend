@@ -1,9 +1,6 @@
 const Message = require("../models/Message");
 
 class MessageController {
-    /**
-     * Send a new message
-     */
     static async sendMessage(data) {
         try {
             const { senderId, receiverId, message, replyToMessageId } = data;
@@ -23,9 +20,6 @@ class MessageController {
         }
     }
 
-    /**
-     * Get all messages between two users
-     */
     static async getMessages(req, res) {
         try {
             const page = parseInt(req.query.page) || 1; // default to page 1
@@ -66,9 +60,6 @@ class MessageController {
         }
     }
 
-    /**
-     * Mark message as read
-     */
     static async markAsRead(req, res) {
         try {
             const { messageId } = req.params;
@@ -89,9 +80,6 @@ class MessageController {
         }
     }
 
-    /**
-     * Soft delete message for a specific user
-     */
     static async deleteMessage(req, res) {
         try {
             const userId = req.user._id;
@@ -174,7 +162,6 @@ class MessageController {
             });
         }
     }
-
 }
 
 module.exports = MessageController;
