@@ -117,7 +117,7 @@ class FriendController {
             const userId = req.user._id
             const user = await User.findById(req.user._id)
                 .select('friends blockedUsers')
-                .populate('friends', 'username email');
+                .populate('friends', 'username email status');
 
             const  blockedIds = user.blockedUsers;
 
@@ -139,6 +139,7 @@ class FriendController {
                     return {
                         _id: friend._id,
                         username: friend.username,
+                        status: friend.status,
                         email: friend.email,
                         profileImg: friend.profileImg,
                         lastMessage,
@@ -147,6 +148,8 @@ class FriendController {
                     };
                 })
             )
+            console.log(friends,"::friends");
+            
 
             res.json({
                 status: true,

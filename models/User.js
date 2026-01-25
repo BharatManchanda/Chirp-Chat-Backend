@@ -54,7 +54,7 @@ const UserSchema = mongoose.Schema({
     },
     status: {
         type: String,
-        default: "",
+        default: "Hi I am using chirp chat",
     },
     isActive: {
         type: Boolean,
