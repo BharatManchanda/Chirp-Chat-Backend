@@ -1,4 +1,5 @@
 const Message = require("../models/Message");
+const mongoose = require("mongoose");
 
 class MessageController {
     static async sendMessage(data) {
@@ -14,8 +15,6 @@ class MessageController {
                 .populate('replyToMessageId');
             return savedMessage;
         } catch (err) {
-            console.log(err.message,":message");
-            
             throw new Error("Message saving failed: " + err.message);
         }
     }
@@ -162,6 +161,41 @@ class MessageController {
             });
         }
     }
+
+    static async getUnreadMessage(data, flag = "receiverId") {
+        try {
+            const { senderId, receiverId } = data;
+
+            // Build match condition dynamically
+            const matchCondition = {
+                readAt: null,
+            };
+
+            if (flag === "receiverId") {
+                matchCondition.receiverId = new mongoose.Types.ObjectId(receiverId);
+            } else if (flag === "senderId") {
+                matchCondition.senderId = new mongoose.Types.ObjectId(senderId);
+            }
+
+            const unreadMessages = await Message.aggregate([
+                {
+                    $match: matchCondition
+                },
+                {
+                    $group: {
+                        _id: "$senderId",
+                        unreadCount: { $sum: 1 }
+                    }
+                }
+            ]);
+
+            return unreadMessages;
+        } catch (err) {
+            console.log(err.message, "::errmessage");
+            throw new Error("Unread message Failed: " + err.message);
+        }
+    }
+
 }
 
 module.exports = MessageController;
