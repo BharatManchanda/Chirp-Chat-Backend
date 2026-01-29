@@ -106,6 +106,8 @@ io.on("connection", (socket) => {
 			{ senderId, receiverId },
 			{ $set: { readAt: new Date(), status: "read" } }
 		);
+		
+		// Notify sender that messages are read
 		io.to(senderId).emit("mark-as-read", { receiverId });
 	});
 

@@ -148,9 +148,6 @@ class FriendController {
                     };
                 })
             )
-            console.log(friends,"::friends");
-            
-
             res.json({
                 status: true,
                 data: friends
