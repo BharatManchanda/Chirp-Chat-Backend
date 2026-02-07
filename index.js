@@ -13,6 +13,7 @@ const friendRouter = require("./routes/friend");
 const messageRouter = require("./routes/message");
 const peopleRouter = require("./routes/people");
 const userRouter = require("./routes/user");
+const groupRouter = require("./routes/group");
 
 const MessageController = require("./controllers/messageController");
 const User = require("./models/User");
@@ -46,6 +47,7 @@ app.use("/api", friendRouter);
 app.use("/api", messageRouter);
 app.use("/api", peopleRouter);
 app.use("/api", userRouter);
+app.use("/api", groupRouter);
 
 // ================== WEB PUSH ==================
 webPush.setVapidDetails(

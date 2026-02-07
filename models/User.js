@@ -60,6 +60,12 @@ const UserSchema = mongoose.Schema({
         type: Boolean,
         default: true,
     },
+    groups: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Group',
+        }
+    ]
 }, {
     timestamps:true,
 })
