@@ -4,16 +4,18 @@ const mongoose = require("mongoose");
 class MessageController {
     static async sendMessage(data) {
         try {
-            const { senderId, receiverId, message, replyToMessageId } = data;
-            const newMessage = await Message.create({
+            const { senderId, receiverId, message, replyToMessageId, isGroup } = data;
+            let newData = {
                 senderId,
-                receiverId,
                 message,
                 replyToMessageId,
-            });
+            };
+            newData.receiverId = isGroup ? null : receiverId;
+            newData.group = isGroup ? receiverId : null;
+            const newMessage = await Message.create(newData);
             const savedMessage = await Message.findById(newMessage._id)
                 .populate('replyToMessageId');
-            return savedMessage;
+            return savedMessage.toObject();
         } catch (err) {
             throw new Error("Message saving failed: " + err.message);
         }
@@ -21,29 +23,66 @@ class MessageController {
 
     static async getMessages(req, res) {
         try {
-            const page = parseInt(req.query.page) || 1; // default to page 1
+            const page = parseInt(req.query.page) || 1; // default page 1
             const limit = parseInt(req.params.limit) || 50;
             const skip = (page - 1) * limit;
 
-            const messages = await Message.find({
-                $or: [
-                    { senderId: req.user._id, receiverId: req.params.friendId, deletedForSender: { $ne: true } },
-                    { senderId: req.params.friendId, receiverId: req.user._id, deletedForReceiver: { $ne: true } }
-                ]
-            }).populate('replyToMessageId').sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
+            const isGroup = req.query.isGroup === 'true'; // ensure boolean
+            const targetId = req.params.friendId; // friendId or groupId
 
-            const totalMessages = await Message.countDocuments({
-                $or: [
-                    { senderId: req.user._id, receiverId: req.params.friendId },
-                    { senderId: req.params.friendId, receiverId: req.user._id }
-                ]
-            });
+            let condition = [];
+
+            if (!isGroup) {
+                // 1-to-1 chat
+                condition = [
+                    {
+                        senderId: req.user._id,
+                        receiverId: targetId,
+                        deletedForSender: { $ne: true }
+                    },
+                    {
+                        senderId: targetId,
+                        receiverId: req.user._id,
+                        deletedForReceiver: { $ne: true }
+                    }
+                ];
+            } else {
+                // Group chat
+                condition = [
+                    {
+                        group: targetId,
+                        deletedForSender: { $ne: true }
+                    },
+                    {
+                        group: targetId,
+                        deletedForReceiver: { $ne: true }
+                    }
+                ];
+            }
+
+            // Fetch messages
+            const messages = await Message.find({ $or: condition })
+                .populate('replyToMessageId')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit);
+
+            // Count total messages for pagination
+            let totalMessages = 0;
+            if (!isGroup) {
+                totalMessages = await Message.countDocuments({
+                    $or: [
+                        { senderId: req.user._id, receiverId: targetId },
+                        { senderId: targetId, receiverId: req.user._id }
+                    ]
+                });
+            } else {
+                totalMessages = await Message.countDocuments({ group: targetId });
+            }
 
             res.json({
                 status: true,
-                data: messages.reverse(),
+                data: messages.reverse(), // oldest first
                 pagination: {
                     total: totalMessages,
                     page,
@@ -58,6 +97,7 @@ class MessageController {
             });
         }
     }
+
 
     static async markAsRead(req, res) {
         try {
@@ -164,17 +204,21 @@ class MessageController {
 
     static async getUnreadMessage(data, flag = "receiverId") {
         try {
-            const { senderId, receiverId } = data;
+            const { senderId, receiverId, isGroup } = data;
 
             // Build match condition dynamically
             const matchCondition = {
                 readAt: null,
             };
 
-            if (flag === "receiverId") {
-                matchCondition.receiverId = new mongoose.Types.ObjectId(receiverId);
-            } else if (flag === "senderId") {
-                matchCondition.senderId = new mongoose.Types.ObjectId(senderId);
+            if (!isGroup) {
+                if (flag === "receiverId") {
+                    matchCondition.receiverId = new mongoose.Types.ObjectId(receiverId);
+                } else if (flag === "senderId") {
+                    matchCondition.senderId = new mongoose.Types.ObjectId(senderId);
+                }
+            } else {
+                matchCondition.group = new mongoose.Types.ObjectId(receiverId);
             }
 
             const unreadMessages = await Message.aggregate([
@@ -183,15 +227,16 @@ class MessageController {
                 },
                 {
                     $group: {
-                        _id: "$senderId",
+                        _id: isGroup ? "$group" : "$senderId",
                         unreadCount: { $sum: 1 }
                     }
                 }
             ]);
+            console.log(unreadMessages,"::unreadMessages");
+            
 
             return unreadMessages;
         } catch (err) {
-            console.log(err.message, "::errmessage");
             throw new Error("Unread message Failed: " + err.message);
         }
     }

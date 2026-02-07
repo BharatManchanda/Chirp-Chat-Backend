@@ -18,6 +18,7 @@ const groupRouter = require("./routes/group");
 const MessageController = require("./controllers/messageController");
 const User = require("./models/User");
 const Message = require("./models/Message");
+const Group = require("./models/Group");
 
 // ================== SERVER ==================
 const server = http.createServer(app);
@@ -49,14 +50,12 @@ app.use("/api", peopleRouter);
 app.use("/api", userRouter);
 app.use("/api", groupRouter);
 
-// ================== WEB PUSH ==================
 webPush.setVapidDetails(
 	"mailto:bharatmanchanda13@gmail.com",
 	process.env.VAPID_PUBLIC_KEY,
 	process.env.VAPID_PRIVATE_KEY
 );
 
-// ================== SOCKET LOGIC ==================
 const onlineUsers = new Map();
 
 io.on("connection", (socket) => {
@@ -80,22 +79,43 @@ io.on("connection", (socket) => {
 	socket.on("chat-message", async (data) => {
 		try {
 			const savedMessage = await MessageController.sendMessage(data);
-
-			io.to(data.receiverId).emit("chat-message", savedMessage);
-			io.to(data.senderId).emit("chat-message", savedMessage);
-
-			const unreadMessage = await MessageController.getUnreadMessage(data);
-			io.to(data.receiverId).emit("unread-message-count", unreadMessage);
-
-			const user = await User.findById(data.receiverId);
-			if (user?.subscription) {
-				await webPush.sendNotification(
-					user.subscription,
-					JSON.stringify({
-						title: "New Message",
-						body: savedMessage.message,
-					})
-				);
+			if (!data.isGroup) {
+				io.to(data.receiverId).emit("chat-message", savedMessage);
+				io.to(data.senderId).emit("chat-message", savedMessage);
+	
+				const unreadMessage = await MessageController.getUnreadMessage(data);
+				io.to(data.receiverId).emit("unread-message-count", unreadMessage.map(unMsg => ({...unMsg, isGroup: false})));
+	
+				const user = await User.findById(data.receiverId);
+				if (user?.subscription) {
+					await webPush.sendNotification(
+						user.subscription,
+						JSON.stringify({
+							title: "New Message",
+							body: savedMessage.message,
+						})
+					);
+				}
+			} else {
+				const group = await Group.findById(data.receiverId);
+				if (!group) return;
+				const users = await User.find({_id: { $in: group.members}})
+				io.to(data.senderId).emit("chat-message", savedMessage);
+				users.map(async (user) => {
+					
+					io.to(String(user._id)).emit("chat-message", {...savedMessage, group: true});
+					const unreadMessage = await MessageController.getUnreadMessage(data);
+					io.to(String(user._id)).emit("unread-message-count", {...unreadMessage, isGroup:true});
+					// if (user?.subscription) {
+					// 	await webPush.sendNotification(
+					// 		user.subscription,
+					// 		JSON.stringify({
+					// 			title: "New Message",
+					// 			body: savedMessage.message,
+					// 		})
+					// 	);
+					// }
+				});
 			}
 		} catch (err) {
 			console.error(err.message);

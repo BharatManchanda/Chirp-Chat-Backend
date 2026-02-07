@@ -1,4 +1,5 @@
 const Group = require("../models/Group");
+const Message = require("../models/Message");
 const User = require("../models/User");
 
 class GroupController {
@@ -35,29 +36,40 @@ class GroupController {
     }
 
     static async get(req, res) {
-        try {
-            const user = await User.findOne(req.user._id);
-            
-            const groups = await Group.find({
-                _id: {$in: user.groups}
-            })
-            .populate("owner", "username email profileImg")
-            .populate("admins", "username email profileImg")
-            .populate("members", "username email profileImg")
-            .sort({ createdAt: -1 });
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
 
-            return res.json({
-                status: true,
-                message: "Fetched group successfully.",
-                data: groups
-            });
-        } catch (error) {
-            return res.json({
-                status: false,
-                message: error.message
-            });
-        }
+        let groups = await Group.find({
+            _id: { $in: user.groups }
+        })
+        .populate("owner", "username email profileImg")
+        .populate("admins", "username email profileImg")
+        .populate("members", "username email profileImg")
+        .sort({ createdAt: -1 });
+
+        groups = await Promise.all(groups.map(async (group) => {
+            const lastMessage = await Message.findOne({ group: group._id })
+                .sort({ createdAt: -1 });
+            return {
+                ...group.toObject(),
+                lastMessage
+            };
+        }));
+
+        return res.json({
+            status: true,
+            message: "Fetched group successfully.",
+            data: groups
+        });
+    } catch (error) {
+        return res.json({
+            status: false,
+            message: error.message
+        });
     }
+}
+
 }
 
 module.exports = GroupController
