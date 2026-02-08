@@ -100,10 +100,8 @@ io.on("connection", (socket) => {
 				const group = await Group.findById(data.receiverId);
 				if (!group) return;
 				const users = await User.find({_id: { $in: group.members}})
-				io.to(data.senderId).emit("chat-message", savedMessage);
 				users.map(async (user) => {
-					
-					io.to(String(user._id)).emit("chat-message", {...savedMessage, group: true});
+					io.to(String(user._id)).emit("chat-message", {...savedMessage, isGroup: true});
 					const unreadMessage = await MessageController.getUnreadMessage(data);
 					io.to(String(user._id)).emit("unread-message-count", {...unreadMessage, isGroup:true});
 					// if (user?.subscription) {
