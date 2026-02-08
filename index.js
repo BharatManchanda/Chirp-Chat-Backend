@@ -80,8 +80,8 @@ io.on("connection", (socket) => {
 		try {
 			const savedMessage = await MessageController.sendMessage(data);
 			if (!data.isGroup) {
-				io.to(data.receiverId).emit("chat-message", savedMessage);
-				io.to(data.senderId).emit("chat-message", savedMessage);
+				io.to(data.receiverId).emit("chat-message", {...savedMessage, isGroup: false});
+				io.to(data.senderId).emit("chat-message", {...savedMessage, isGroup: false});
 	
 				const unreadMessage = await MessageController.getUnreadMessage(data);
 				io.to(data.receiverId).emit("unread-message-count", unreadMessage.map(unMsg => ({...unMsg, isGroup: false})));
