@@ -121,14 +121,43 @@ io.on("connection", (socket) => {
 	});
 
 	socket.on("mark-as-read", async (data) => {
-		const { senderId, receiverId } = data
-		await Message.updateMany(
-			{ senderId, receiverId },
-			{ $set: { readAt: new Date(), status: "read" } }
-		);
-		
-		// Notify sender that messages are read
-		io.to(senderId).emit("mark-as-read", { receiverId });
+		try {
+			const { senderId, receiverId, isGroup } = data;
+
+			// Build query
+			const query = { senderId, receiverId };
+
+			// Build update
+			const update = isGroup
+				? {
+					// For group, update existing readBy or push new
+					$set: { "readBy.$[elem].readAt": new Date() }
+				}
+				: { $set: { status: "read" } };
+
+			const options = {
+				arrayFilters: [{ "elem.userId": receiverId }],
+				multi: true,
+				upsert: false
+			};
+
+			const result = await Message.updateMany(query, update, options);
+
+			// If some messages did not have this user in readBy, push new
+			await Message.updateMany(
+				{
+					senderId,
+					receiverId,
+					"readBy.userId": { $ne: receiverId }
+				},
+				{ $push: { readBy: { userId: receiverId, readAt: new Date() } } }
+			);
+
+			io.to(senderId).emit("mark-as-read", { receiverId });
+
+		} catch (err) {
+			console.error("Error in mark-as-read socket:", err.message);
+		}
 	});
 
 	// ===== CALL EVENTS =====

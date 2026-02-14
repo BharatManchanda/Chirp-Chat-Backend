@@ -133,7 +133,8 @@ class FriendController {
                     const unreadCount = await Message.countDocuments({
                         senderId: friend._id,
                         receiverId: userId,
-                        readAt: null
+                        "readBy.userId": { $ne: userId }
+                        // readAt: null
                     });
 
                     return {

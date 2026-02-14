@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const bcrypt = require('bcryptjs');
 
 const MessageSchema = mongoose.Schema({
     senderId: {
@@ -29,10 +28,23 @@ const MessageSchema = mongoose.Schema({
         ref: 'Message',
         default: null,
     },
-    readAt: {
-        type: Date,
-        default: null,
-    },
+    readBy: [
+        {
+            userId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+                required: true,
+            },
+            readAt: {
+                type: Date,
+                default: Date.now,
+            }
+        }
+    ],
+    // readAt: {
+    //     type: Date,
+    //     default: null,
+    // },
     status: {
         type: String,
         default: 'sent', // sent delivered read

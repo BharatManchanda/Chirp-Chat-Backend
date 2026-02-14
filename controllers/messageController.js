@@ -102,20 +102,53 @@ class MessageController {
     static async markAsRead(req, res) {
         try {
             const { messageId } = req.params;
+            const userId = req.user._id;
+
+            // Find message first
+            const message = await Message.findById(messageId);
+            
+            // Check if user already marked as read
+            const alreadyRead = message.readBy.some( r => r.userId.toString() === userId.toString());
+
+            if (alreadyRead) {
+                return res.status(400).json({
+                    status: false,
+                    message: "Message already marked as read"
+                });
+            }
+
+            // Prepare update
+            const update = {
+                $addToSet: {
+                    readBy: {
+                        userId,
+                        readAt: new Date()
+                    }
+                }
+            };
+
+            // ONLY for one-to-one chat, set status
+            if (!message.group) {
+                update.$set = { status: "read" };
+            }
 
             const updated = await Message.findByIdAndUpdate(
                 messageId,
-                { readAt: new Date(), status: 'read' },
+                update,
                 { new: true }
             );
 
-            if (!updated) {
-                return res.status(404).json({ status: false, message: "Message not found" });
-            }
+            res.json({
+                status: true,
+                message: "Message marked as read",
+                data: updated
+            });
 
-            res.json({ status: true, message: "Message marked as read", data: updated });
         } catch (err) {
-            res.status(500).json({ status: false, message: err.message });
+            res.status(422).json({
+                status: false,
+                message: err.message
+            });
         }
     }
 
@@ -202,44 +235,89 @@ class MessageController {
         }
     }
 
+    // static async getUnreadMessage(data, flag = "receiverId") {
+    //     try {
+    //         const { senderId, receiverId, isGroup } = data;
+
+    //         // Build match condition dynamically
+    //         const matchCondition = {
+    //             readAt: null,
+    //         };
+
+    //         if (!isGroup) {
+    //             if (flag === "receiverId") {
+    //             matchCondition.receiverId = new mongoose.Types.ObjectId(receiverId);
+    //             } else if (flag === "senderId") {
+    //                 matchCondition.senderId = new mongoose.Types.ObjectId(senderId);
+    //             }
+    //         } else {
+    //             matchCondition.group = new mongoose.Types.ObjectId(receiverId);
+    //         }
+
+    //         const unreadMessages = await Message.aggregate([
+    //             {
+    //                 $match: matchCondition
+    //             },
+    //             {
+    //                 $group: {
+    //                     _id: isGroup ? "$group" : "$senderId",
+    //                     unreadCount: { $sum: 1 }
+    //                 }
+    //             }
+    //         ]);
+    //         console.log(unreadMessages,"::unreadMessages");
+            
+
+    //         return unreadMessages;
+    //     } catch (err) {
+    //         throw new Error("Unread message Failed: " + err.message);
+    //     }
+    // }
+
     static async getUnreadMessage(data, flag = "receiverId") {
-        try {
-            const { senderId, receiverId, isGroup } = data;
+    try {
+        const { senderId, receiverId, isGroup } = data;
 
-            // Build match condition dynamically
-            const matchCondition = {
-                readAt: null,
-            };
-
-            if (!isGroup) {
-                if (flag === "receiverId") {
-                    matchCondition.receiverId = new mongoose.Types.ObjectId(receiverId);
-                } else if (flag === "senderId") {
-                    matchCondition.senderId = new mongoose.Types.ObjectId(senderId);
-                }
-            } else {
-                matchCondition.group = new mongoose.Types.ObjectId(receiverId);
-            }
-
+        if (!isGroup) {
+            // Private chat: find messages sent to receiverId that they haven't read yet
             const unreadMessages = await Message.aggregate([
                 {
-                    $match: matchCondition
+                    $match: {
+                        receiverId: new mongoose.Types.ObjectId(receiverId),
+                        senderId: new mongoose.Types.ObjectId(senderId),
+                        "readBy.userId": { $ne: new mongoose.Types.ObjectId(receiverId) }, // receiver hasn't read
+                    },
                 },
                 {
                     $group: {
-                        _id: isGroup ? "$group" : "$senderId",
-                        unreadCount: { $sum: 1 }
-                    }
-                }
+                        _id: "$senderId",
+                        unreadCount: { $sum: 1 },
+                    },
+                },
             ]);
-            console.log(unreadMessages,"::unreadMessages");
-            
-
             return unreadMessages;
-        } catch (err) {
-            throw new Error("Unread message Failed: " + err.message);
+        } else {
+            // Group chat: find messages in the group that this user hasn't read
+            const unreadMessages = await Message.aggregate([
+                {
+                    $match: {
+                        group: new mongoose.Types.ObjectId(receiverId),
+                        "readBy.userId": { $ne: new mongoose.Types.ObjectId(senderId) }, // user hasn't read
+                    },
+                },
+                {
+                    $group: {
+                        _id: "$group",
+                        unreadCount: { $sum: 1 },
+                    },
+                },
+            ]);
+            return unreadMessages;
         }
+    } catch (err) {
+        throw new Error("Unread message Failed: " + err.message);
     }
+}
 
 }
 
