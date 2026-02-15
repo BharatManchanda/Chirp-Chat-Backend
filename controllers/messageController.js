@@ -353,9 +353,7 @@ class MessageController {
             {
                 $match: {
                     group: new mongoose.Types.ObjectId(groupId),
-
-                    // Ignore messages sent by same user
-                    // senderId: { $ne: new mongoose.Types.ObjectId(senderId) },
+                    senderId: { $ne: new mongoose.Types.ObjectId(receiverId) },
 
                     // USER HAS NOT READ
                     readBy: {

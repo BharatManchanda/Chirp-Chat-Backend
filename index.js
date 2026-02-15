@@ -142,28 +142,44 @@ io.on("connection", (socket) => {
 
 	socket.on("mark-as-read", async (data) => {
 		try {
-			const { senderId, receiverId, isGroup } = data;
+			const { senderId, receiverId, isGroup, groupId, userId } = data;
 
-			// Build query
-			const query = { senderId, receiverId };
+			if (isGroup) {
+				const currentUserId = userId || receiverId;
+				const currentGroupId = groupId || receiverId;
 
-			// Build update
-			const update = isGroup
-				? {
-					// For group, update existing readBy or push new
-					$set: { "readBy.$[elem].readAt": new Date() }
-				}
-				: { $set: { status: "read" } };
+				if (!currentUserId || !currentGroupId) return;
 
-			const options = {
-				arrayFilters: [{ "elem.userId": receiverId }],
-				multi: true,
-				upsert: false
-			};
+				await Message.updateMany(
+					{
+						group: currentGroupId,
+						senderId: { $ne: currentUserId }
+					},
+					{ $set: { "readBy.$[elem].readAt": new Date() } },
+					{
+						arrayFilters: [{ "elem.userId": currentUserId }],
+						multi: true,
+						upsert: false
+					}
+				);
 
-			const result = await Message.updateMany(query, update, options);
+				await Message.updateMany(
+					{
+						group: currentGroupId,
+						senderId: { $ne: currentUserId },
+						"readBy.userId": { $ne: currentUserId }
+					},
+					{ $push: { readBy: { userId: currentUserId, readAt: new Date() } } }
+				);
 
-			// If some messages did not have this user in readBy, push new
+				return;
+			}
+
+			await Message.updateMany(
+				{ senderId, receiverId },
+				{ $set: { status: "read" } }
+			);
+
 			await Message.updateMany(
 				{
 					senderId,
@@ -173,7 +189,7 @@ io.on("connection", (socket) => {
 				{ $push: { readBy: { userId: receiverId, readAt: new Date() } } }
 			);
 
-			io.to(senderId).emit("mark-as-read", { receiverId });
+			io.to(senderId).emit("mark-as-read", { receiverId, isGroup: false });
 
 		} catch (err) {
 			console.error("Error in mark-as-read socket:", err.message);
