@@ -274,46 +274,107 @@ class MessageController {
     //     }
     // }
 
-    static async getUnreadMessage(data, flag = "receiverId") {
+    // static async getUnreadMessage(data, flag = "receiverId") {
+    //     try {
+    //         const { senderId, receiverId, isGroup } = data;
+
+    //         if (!isGroup) {
+    //             // Private chat: find messages sent to receiverId that they haven't read yet
+    //             const unreadMessages = await Message.aggregate([
+    //                 {
+    //                     $match: {
+    //                         receiverId: new mongoose.Types.ObjectId(receiverId),
+    //                         senderId: new mongoose.Types.ObjectId(senderId),
+    //                         "readBy.userId": { $ne: new mongoose.Types.ObjectId(receiverId) }, // receiver hasn't read
+    //                     },
+    //                 },
+    //                 {
+    //                     $group: {
+    //                         _id: "$senderId",
+    //                         unreadCount: { $sum: 1 },
+    //                     },
+    //                 },
+    //             ]);
+    //             return unreadMessages;
+    //         } else {
+    //             // Group chat: find messages in the group that this user hasn't read
+    //             const unreadMessages = await Message.aggregate([
+    //                 {
+    //                     $match: {
+    //                         group: new mongoose.Types.ObjectId(receiverId),
+    //                         "readBy.userId": { $ne: new mongoose.Types.ObjectId(senderId) }, // user hasn't read
+    //                     },
+    //                 },
+    //                 {
+    //                     $group: {
+    //                         _id: "$group",
+    //                         unreadCount: { $sum: 1 },
+    //                     },
+    //                 },
+    //             ]);
+    //             return unreadMessages;
+    //         }
+    //     } catch (err) {
+    //         throw new Error("Unread message Failed: " + err.message);
+    //     }
+    // }
+
+    static async getUnreadMessage(data) {
     try {
-        const { senderId, receiverId, isGroup } = data;
+        const { senderId, receiverId, isGroup, groupId } = data;
 
         if (!isGroup) {
-            // Private chat: find messages sent to receiverId that they haven't read yet
-            const unreadMessages = await Message.aggregate([
+            // PRIVATE CHAT (already correct mostly)
+            return await Message.aggregate([
                 {
                     $match: {
                         receiverId: new mongoose.Types.ObjectId(receiverId),
                         senderId: new mongoose.Types.ObjectId(senderId),
-                        "readBy.userId": { $ne: new mongoose.Types.ObjectId(receiverId) }, // receiver hasn't read
-                    },
+                        readBy: {
+                            $not: {
+                                $elemMatch: {
+                                    userId: new mongoose.Types.ObjectId(receiverId)
+                                }
+                            }
+                        }
+                    }
                 },
                 {
                     $group: {
                         _id: "$senderId",
-                        unreadCount: { $sum: 1 },
-                    },
-                },
+                        unreadCount: { $sum: 1 }
+                    }
+                }
             ]);
-            return unreadMessages;
-        } else {
-            // Group chat: find messages in the group that this user hasn't read
-            const unreadMessages = await Message.aggregate([
-                {
-                    $match: {
-                        group: new mongoose.Types.ObjectId(receiverId),
-                        "readBy.userId": { $ne: new mongoose.Types.ObjectId(senderId) }, // user hasn't read
-                    },
-                },
-                {
-                    $group: {
-                        _id: "$group",
-                        unreadCount: { $sum: 1 },
-                    },
-                },
-            ]);
-            return unreadMessages;
         }
+
+        // ✅ GROUP CHAT FIXED LOGIC
+        return await Message.aggregate([
+            {
+                $match: {
+                    group: new mongoose.Types.ObjectId(groupId),
+
+                    // Ignore messages sent by same user
+                    // senderId: { $ne: new mongoose.Types.ObjectId(senderId) },
+
+                    // USER HAS NOT READ
+                    readBy: {
+                        $not: {
+                            $elemMatch: {
+                                userId: new mongoose.Types.ObjectId(receiverId)
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: "$group",
+                    unreadCount: { $sum: 1 }
+                }
+            }
+        ]);
+
     } catch (err) {
         throw new Error("Unread message Failed: " + err.message);
     }

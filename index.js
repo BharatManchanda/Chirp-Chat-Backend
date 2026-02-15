@@ -59,7 +59,6 @@ webPush.setVapidDetails(
 const onlineUsers = new Map();
 
 io.on("connection", (socket) => {
-
 	socket.on("join", (userId) => {
 		onlineUsers.set(userId, socket.id);
 		socket.join(userId);
@@ -87,23 +86,44 @@ io.on("connection", (socket) => {
 				io.to(data.receiverId).emit("unread-message-count", unreadMessage.map(unMsg => ({...unMsg, isGroup: false})));
 	
 				const user = await User.findById(data.receiverId);
-				if (user?.subscription) {
-					await webPush.sendNotification(
-						user.subscription,
-						JSON.stringify({
-							title: "New Message",
-							body: savedMessage.message,
-						})
-					);
-				}
+				// if (user?.subscription) {
+				// 	await webPush.sendNotification(
+				// 		user.subscription,
+				// 		JSON.stringify({
+				// 			title: "New Message",
+				// 			body: savedMessage.message,
+				// 		})
+				// 	);
+				// }
 			} else {
 				const group = await Group.findById(data.receiverId);
 				if (!group) return;
 				const users = await User.find({_id: { $in: group.members}})
-				users.map(async (user) => {
-					io.to(String(user._id)).emit("chat-message", {...savedMessage, isGroup: true});
-					const unreadMessage = await MessageController.getUnreadMessage(data);
-					io.to(String(user._id)).emit("unread-message-count", {...unreadMessage, isGroup:true});
+				// users.map(async (user) => {
+				// 	io.to(String(user._id)).emit("chat-message", {...savedMessage, isGroup: true});
+				// 	const unreadMessage = await MessageController.getUnreadMessage(data);
+				// 	io.to(String(user._id)).emit("unread-message-count", {...unreadMessage, isGroup:true});
+				// if (user?.subscription) {
+				// 	await webPush.sendNotification(
+				// 		user.subscription,
+				// 		JSON.stringify({
+				// 			title: "New Message",
+				// 			body: savedMessage.message,
+				// 		})
+				// 	);
+				// }
+				// });
+
+				for (const user of users) {
+					io.to(String(user._id)).emit("chat-message", { ...savedMessage, isGroup: true });
+
+					let unreadMessage = await MessageController.getUnreadMessage({
+						...data,
+						groupId: data.receiverId,
+						receiverId: user._id,
+					});
+					unreadMessage = unreadMessage.map((unMsg) => ({...unMsg, isGroup: true}))
+					io.to(String(user._id)).emit("unread-message-count", unreadMessage);
 					// if (user?.subscription) {
 					// 	await webPush.sendNotification(
 					// 		user.subscription,
@@ -113,7 +133,7 @@ io.on("connection", (socket) => {
 					// 		})
 					// 	);
 					// }
-				});
+				}
 			}
 		} catch (err) {
 			console.error(err.message);
