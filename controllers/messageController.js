@@ -80,6 +80,43 @@ class MessageController {
                 totalMessages = await Message.countDocuments({ group: targetId });
             }
 
+            // Persist read state when chat is opened/fetched (important on page refresh).
+            if (!isGroup) {
+                await Message.updateMany(
+                    { senderId: targetId, receiverId: req.user._id },
+                    { $set: { status: "read" } }
+                );
+
+                await Message.updateMany(
+                    {
+                        senderId: targetId,
+                        receiverId: req.user._id,
+                        "readBy.userId": { $ne: req.user._id }
+                    },
+                    { $push: { readBy: { userId: req.user._id, readAt: new Date() } } }
+                );
+            } else {
+                await Message.updateMany(
+                    {
+                        group: targetId,
+                        senderId: { $ne: req.user._id }
+                    },
+                    { $set: { "readBy.$[elem].readAt": new Date() } },
+                    {
+                        arrayFilters: [{ "elem.userId": req.user._id }]
+                    }
+                );
+
+                await Message.updateMany(
+                    {
+                        group: targetId,
+                        senderId: { $ne: req.user._id },
+                        "readBy.userId": { $ne: req.user._id }
+                    },
+                    { $push: { readBy: { userId: req.user._id, readAt: new Date() } } }
+                );
+            }
+
             res.json({
                 status: true,
                 data: messages.reverse(), // oldest first
